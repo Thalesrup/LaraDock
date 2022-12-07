@@ -1,0 +1,64 @@
+version: "3.7"
+
+services:
+    # image projeto
+    api:
+        container_name: laravelDock-api
+        build:
+            context: .
+            dockerfile: Dockerfile
+        restart: unless-stopped
+        working_dir: /var/www/
+        command: "php artisan serve --host=0.0.0.0 --port=8000"
+        ports:
+            - "8000:8000"
+        volumes:
+            - ./src:/var/www
+        depends_on:
+            - redis
+            - mariadb
+        networks:
+            - laravelDock-net-api
+
+    # banco de dados
+    mariadb:
+      image: mariadb:10.4.12
+      container_name: laravelDocker-mariadb
+      environment:
+            MYSQL_ROOT_PASSWORD: "${DB_PASSWORD}"
+            MYSQL_DATABASE: "${DB_NAME}"
+            MYSQL_USER: "${DB_USER_APP}"
+            MYSQL_PASSWORD: "${DB_PASSWORD}"
+      volumes:
+        - ./docker/mysql/dbdata:/var/lib/mysql
+      networks: 
+        - laravelDock-net-api 
+
+    # phpmyadmin
+    mariadbadmin:
+      image: phpmyadmin
+      container_name: mariadbadmin
+      ports:
+        - 7000:80
+      environment:
+        - MYSQL_ROOT_PASSWORD=${DB_PASSWORD}
+        - PMA_ARBITRARY=1
+        - PMA_HOST=mariadb
+      # volumes:
+      #   - ./docker/phpmyadmin/local/config.user.inc.php:/etc/phpmyadmin/config.user.inc.php
+      #   - /sessions
+      links:
+         - mariadb
+      networks: 
+        - laravelDock-net-api
+
+    # redis
+    redis:
+        container_name: laravelDock-redis
+        image: redis:latest
+        networks: 
+            - laravelDock-net-api
+
+networks: 
+    laravelDock-net-api:
+        driver: bridge
